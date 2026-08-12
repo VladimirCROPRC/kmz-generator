@@ -472,7 +472,81 @@ ${point.lon},${point.lat},0
     return kml;
 
 }
+function distance(a,b){
 
+    const dx =
+        a.lat - b.lat;
+
+    const dy =
+        a.lon - b.lon;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+
+}
+    function optimizePoints(points){
+
+    if(points.length < 3){
+        return points;
+    }
+
+    const result = [];
+
+    let current =
+        points[0];
+
+    result.push(current);
+
+    const remaining =
+        [...points.slice(1)];
+
+    while(remaining.length){
+
+        let bestIndex = 0;
+
+        let bestDistance =
+            distance(
+                current,
+                remaining[0]
+            );
+
+        for(
+            let i = 1;
+            i < remaining.length;
+            i++
+        ){
+
+            const d =
+                distance(
+                    current,
+                    remaining[i]
+                );
+
+            if(d < bestDistance){
+
+                bestDistance = d;
+
+                bestIndex = i;
+
+            }
+
+        }
+
+        current =
+            remaining.splice(
+                bestIndex,
+                1
+            )[0];
+
+        result.push(current);
+
+    }
+
+    return result;
+
+}
     function openGoogleMaps(){
 
     const coordLines =
