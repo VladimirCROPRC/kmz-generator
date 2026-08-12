@@ -185,8 +185,12 @@ select{
 
 <div style="text-align:center;">
     <button onclick="exportKML()">
-        Export KML
-    </button>
+    Export KML
+</button>
+
+<button onclick="openGoogleMaps()">
+    📍 Rută Google Maps
+</button>
 </div>
    
 </button>
@@ -459,6 +463,53 @@ ${point.lon},${point.lat},0
 
 }
 
+    function openGoogleMaps(){
+
+    const coordLines =
+        document
+        .getElementById("coords")
+        .value
+        .trim()
+        .split(/\r?\n/);
+
+    if(coordLines.length < 2){
+
+        alert(
+            "Ai nevoie de minim 2 puncte."
+        );
+
+        return;
+    }
+
+    let url =
+        "https://www.google.com/maps/dir/";
+
+    coordLines.forEach(line => {
+
+        const parts =
+            line.trim()
+            .split(/\s+/);
+
+        if(parts.length < 2){
+            return;
+        }
+
+        const lat = parts[0];
+        const lon = parts[1];
+
+        url +=
+            lat +
+            "," +
+            lon +
+            "/";
+    });
+
+    window.open(
+        url,
+        "_blank"
+    );
+
+}
 function exportKML(){
 
     const blob =
