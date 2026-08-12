@@ -565,8 +565,7 @@ function distance(a,b){
         return;
     }
 
-    let url =
-        "https://www.google.com/maps/dir/";
+    let points = [];
 
     coordLines.forEach(line => {
 
@@ -578,14 +577,46 @@ function distance(a,b){
             return;
         }
 
-        const lat = parts[0];
-        const lon = parts[1];
+        points.push({
+
+            lat:
+                parseFloat(
+                    parts[0]
+                ),
+
+            lon:
+                parseFloat(
+                    parts[1]
+                )
+
+        });
+
+    });
+
+    if(
+        document.getElementById(
+            "optimizeRoute"
+        ).checked
+    ){
+
+        points =
+            optimizePoints(
+                points
+            );
+
+    }
+
+    let url =
+        "https://www.google.com/maps/dir/";
+
+    points.forEach(point => {
 
         url +=
-            lat +
+            point.lat +
             "," +
-            lon +
+            point.lon +
             "/";
+
     });
 
     window.open(
