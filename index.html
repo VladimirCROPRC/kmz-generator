@@ -8,34 +8,91 @@
 <style>
 
 body{
-    font-family:Arial,sans-serif;
-    margin:20px;
-    background:#f5f5f5;
+    font-family:'Segoe UI',Arial,sans-serif;
+    margin:0;
+    background:#f4f7fb;
+    color:#333;
+}
+.header{
+    background:linear-gradient(
+        135deg,
+        #005baa,
+        #0072ce
+    );
+    color:white;
+    padding:20px 30px;
+    box-shadow:0 4px 15px rgba(0,0,0,.15);
+}
+
+.logo-area{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.logo-icon{
+    width:55px;
+    height:55px;
+    border-radius:12px;
+    background:white;
+    color:#005baa;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.app-title{
+    font-size:24px;
+    font-weight:700;
+}
+
+.app-subtitle{
+    opacity:.9;
+    font-size:14px;
 }
 
 .container{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr 1fr 1fr;
     gap:20px;
+    padding:20px;
+}
+
+.layers-box{
+    grid-column:1 / 4;
 }
 
 .box{
     background:white;
-    padding:15px;
-    border-radius:8px;
-    box-shadow:0 0 5px rgba(0,0,0,.1);
+    padding:20px;
+    border-radius:14px;
+    box-shadow:
+        0 8px 24px
+        rgba(0,0,0,.08);
 }
 
 textarea{
     width:100%;
-    height:250px;
+    height:180px;
     resize:vertical;
+    box-sizing:border-box;
 }
 
 button{
-    padding:10px 20px;
-    margin:5px;
+    background:#005baa;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
     cursor:pointer;
+    font-weight:600;
+    transition:.2s;
+}
+
+button:hover{
+    background:#00468a;
 }
 
 .layer-row{
@@ -57,53 +114,81 @@ select{
 </head>
 <body>
 
-<h2>Generator KML</h2>
+<div class="header">
+
+    <div class="logo-area">
+
+        <div class="logo-icon">
+            PC
+        </div>
+
+        <div>
+
+            <div class="app-title">
+                PRO CONECT GIS TOOLS
+            </div>
+
+            <div class="app-subtitle">
+                Generator KML pentru documentații FTTH
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
 
 <div class="container">
 
-<div class="box">
-    <h3>Coordonate (Latitudine Longitudine)</h3>
-    <textarea id="coords"></textarea>
-</div>
+    <div class="box">
+        <h3>📍 Coordonate</h3>
+        <textarea id="coords"></textarea>
+    </div>
 
-<div class="box">
-    <h3>Denumire puncte</h3>
-    <textarea id="names"></textarea>
-</div>
+    <div class="box">
+        <h3>📋 Denumire puncte</h3>
+        <textarea id="names"></textarea>
+    </div>
 
-<div class="box">
-    <h3>Operațiuni (Layere)</h3>
-    <textarea id="layers"></textarea>
-</div>
+    <div class="box">
+        <h3>🔧 Operațiuni (Layere)</h3>
+        <textarea id="layers"></textarea>
+    </div>
 
-<div class="box">
+    <div class="box layers-box">
 
-    <h3>Layere</h3>
+        <h3>🎨 Layere detectate</h3>
 
-    <button onclick="detectLayers()">
-        Detectează layere
-    </button>
+        <button onclick="detectLayers()">
+            Detectează layere
+        </button>
 
-    <button onclick="selectAllLayers(true)">
-        Selectează toate
-    </button>
+        <button onclick="selectAllLayers(true)">
+            Selectează toate
+        </button>
 
-    <button onclick="selectAllLayers(false)">
-        Debifează toate
-    </button>
+        <button onclick="selectAllLayers(false)">
+            Debifează toate
+        </button>
 
-    <hr>
+        <hr>
 
-    <div id="layerColors"></div>
+        <div id="layerColors"></div>
 
-</div>
+    </div>
 
 </div>
 
 <hr>
 
-<button onclick="exportKML()">
-    Export KML
+<div style="text-align:center;">
+    <button onclick="exportKML()">
+        Export KML
+    </button>
+</div>
+   
 </button>
 
 <script>
