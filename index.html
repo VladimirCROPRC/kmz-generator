@@ -3,17 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generator KML/KMZ</title>
+<title>Generator KML</title>
 
 <style>
+
 body{
-    font-family: Arial, sans-serif;
+    font-family:Arial,sans-serif;
     margin:20px;
     background:#f5f5f5;
-}
-
-h2{
-    color:#333;
 }
 
 .container{
@@ -26,7 +23,7 @@ h2{
     background:white;
     padding:15px;
     border-radius:8px;
-    box-shadow:0 0 5px rgba(0,0,0,0.1);
+    box-shadow:0 0 5px rgba(0,0,0,.1);
 }
 
 textarea{
@@ -49,87 +46,166 @@ button{
 }
 
 .layer-name{
-    min-width:180px;
+    min-width:200px;
 }
+
+select{
+    padding:4px;
+}
+
 </style>
 </head>
 <body>
 
-<h2>Generator KML / KMZ</h2>
+<h2>Generator KML</h2>
 
 <div class="container">
 
 <div class="box">
-    <h3>Coordonate (Latitudine si Longitudine)</h3>
-    <textarea id="coords"
-placeholder="46.7700    23.5900
-46.7800    23.6000"></textarea>
+    <h3>Coordonate (Latitudine Longitudine)</h3>
+    <textarea id="coords"></textarea>
 </div>
 
 <div class="box">
     <h3>Denumire puncte</h3>
-    <textarea id="names"
-placeholder="Stalp
-
-"></textarea>
+    <textarea id="names"></textarea>
 </div>
 
 <div class="box">
-    <h3>Operatiuni (Layere)</h3>
-    <textarea id="layers"
-placeholder="Operatiune
-
-"></textarea>
+    <h3>Operațiuni (Layere)</h3>
+    <textarea id="layers"></textarea>
 </div>
 
 <div class="box">
-    <h3>Culori Layere</h3>
+
+    <h3>Layere</h3>
 
     <button onclick="detectLayers()">
         Detectează layere
     </button>
 
+    <button onclick="selectAllLayers(true)">
+        Selectează toate
+    </button>
+
+    <button onclick="selectAllLayers(false)">
+        Debifează toate
+    </button>
+
+    <hr>
+
     <div id="layerColors"></div>
+
 </div>
 
 </div>
 
 <hr>
 
-<button onclick="exportKML()">Export KML</button>
-
+<button onclick="exportKML()">
+    Export KML
+</button>
 
 <script>
 
+const iconMap = {
+
+    red:
+    "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+
+    blue:
+    "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
+
+    green:
+    "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
+
+    yellow:
+    "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
+
+    purple:
+    "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+
+    orange:
+    "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png"
+
+};
+
 function detectLayers(){
 
-    const layersText =
+    const layerLines =
         document.getElementById("layers")
         .value
-        .split(/\r?\n/)
-        .map(x=>x.trim())
-        .filter(x=>x);
+        .split(/\r?\n/);
 
-    const unique =
-        [...new Set(layersText)];
+    const counts = {};
+
+    layerLines.forEach(layer=>{
+
+        layer = layer.trim();
+
+        if(layer === "")
+            layer = "Neclasificat";
+
+        counts[layer] =
+            (counts[layer] || 0) + 1;
+
+    });
 
     const container =
-        document.getElementById("layerColors");
+        document.getElementById(
+            "layerColors"
+        );
 
-    container.innerHTML="";
+    container.innerHTML = "";
 
-    unique.forEach(layer=>{
+    Object.keys(counts).forEach(layer=>{
 
         const row =
             document.createElement("div");
 
-        row.className = "layer-row";
+        row.className =
+            "layer-row";
 
         row.innerHTML = `
-            <span class="layer-name">${layer}</span>
-            <input type="color"
-                   data-layer="${layer}"
-                   value="#ff0000">
+            <input
+                type="checkbox"
+                class="layer-enabled"
+                data-layer="${layer}"
+                checked>
+
+            <span class="layer-name">
+                ${layer} (${counts[layer]})
+            </span>
+
+            <select
+                class="layer-color"
+                data-layer="${layer}">
+
+                <option value="red">
+                    🔴 Roșu
+                </option>
+
+                <option value="blue">
+                    🔵 Albastru
+                </option>
+
+                <option value="green">
+                    🟢 Verde
+                </option>
+
+                <option value="yellow">
+                    🟡 Galben
+                </option>
+
+                <option value="purple">
+                    🟣 Mov
+                </option>
+
+                <option value="orange">
+                    🟠 Portocaliu
+                </option>
+
+            </select>
         `;
 
         container.appendChild(row);
@@ -138,51 +214,71 @@ function detectLayers(){
 
 }
 
+function selectAllLayers(value){
 
+    document
+    .querySelectorAll(
+        ".layer-enabled"
+    )
+    .forEach(cb=>{
+        cb.checked = value;
+    });
 
-function hexToKmlColor(hex){
-
-    hex = hex.replace("#","");
-
-    let r = hex.substring(0,2);
-    let g = hex.substring(2,4);
-    let b = hex.substring(4,6);
-
-    return "ff" + b + g + r;
 }
-
-
 
 function buildKML(){
 
     const coordLines =
-        document.getElementById("coords")
+        document
+        .getElementById("coords")
         .value
         .trim()
         .split(/\r?\n/);
 
     const nameLines =
-        document.getElementById("names")
+        document
+        .getElementById("names")
         .value
         .split(/\r?\n/);
 
     const layerLines =
-        document.getElementById("layers")
+        document
+        .getElementById("layers")
         .value
         .split(/\r?\n/);
 
     const layerColors = {};
+    const enabledLayers = {};
 
     document
-    .querySelectorAll("#layerColors input")
+    .querySelectorAll(
+        ".layer-color"
+    )
     .forEach(el=>{
-        layerColors[el.dataset.layer] =
-            el.value;
+
+        layerColors[
+            el.dataset.layer
+        ] = el.value;
+
+    });
+
+    document
+    .querySelectorAll(
+        ".layer-enabled"
+    )
+    .forEach(el=>{
+
+        enabledLayers[
+            el.dataset.layer
+        ] = el.checked;
+
     });
 
     const folders = {};
 
-    for(let i=0;i<coordLines.length;i++){
+    for(let i=0;
+        i<coordLines.length;
+        i++){
 
         const coord =
             coordLines[i]
@@ -196,19 +292,21 @@ function buildKML(){
         const lon = coord[1];
 
         let name =
-            (nameLines[i] || "").trim();
+            (nameLines[i] || "")
+            .trim();
 
         if(name === "")
             name = "Stalp";
 
         let layer =
-            (layerLines[i] || "").trim();
+            (layerLines[i] || "")
+            .trim();
 
         if(layer === "")
             layer = "Neclasificat";
 
         if(!folders[layer])
-            folders[layer]=[];
+            folders[layer] = [];
 
         folders[layer].push({
             name,
@@ -218,26 +316,28 @@ function buildKML(){
 
     }
 
-    let kml = `<?xml version="1.0" encoding="UTF-8"?>
+    let kml =
+`<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>`;
 
-    Object.keys(folders).forEach(layer=>{
+    Object.keys(folders)
+    .forEach(layer=>{
 
-        let color =
-            layerColors[layer] ||
-            "#ff0000";
+        if(!enabledLayers[layer])
+            return;
 
-        let kmlColor =
-            hexToKmlColor(color);
+        const iconUrl =
+            iconMap[
+                layerColors[layer]
+            ] || iconMap.red;
 
         kml += `
 <Style id="${layer}">
 <IconStyle>
-<color>${kmlColor}</color>
 <scale>1.2</scale>
 <Icon>
-<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+<href>${iconUrl}</href>
 </Icon>
 </IconStyle>
 </Style>
@@ -274,9 +374,16 @@ ${point.lon},${point.lat},0
 
 }
 
+function exportKML(){
 
-
-function downloadFile(name, blob){
+    const blob =
+        new Blob(
+            [buildKML()],
+            {
+                type:
+                "application/vnd.google-earth.kml+xml"
+            }
+        );
 
     const a =
         document.createElement("a");
@@ -284,50 +391,13 @@ function downloadFile(name, blob){
     a.href =
         URL.createObjectURL(blob);
 
-    a.download = name;
+    a.download =
+        "puncte.kml";
 
     a.click();
-}
-
-
-
-function exportKML(){
-
-    const kml = buildKML();
-
-    downloadFile(
-        "puncte.kml",
-        new Blob(
-            [kml],
-            {
-                type:"application/vnd.google-earth.kml+xml"
-            }
-        )
-    );
-}
-
-
-
-async function exportKMZ(){
-
-    const zip = new JSZip();
-
-    zip.file(
-        "doc.kml",
-        buildKML()
-    );
-
-    const blob =
-        await zip.generateAsync({
-            type:"blob"
-        });
-
-    downloadFile(
-        "puncte.kmz",
-        blob
-    );
 
 }
+
 </script>
 
 </body>
