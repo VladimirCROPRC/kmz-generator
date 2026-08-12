@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator KML/KMZ</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:20px;
+    background:#f5f5f5;
+}
+
+h2{
+    color:#333;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.box{
+    background:white;
+    padding:15px;
+    border-radius:8px;
+    box-shadow:0 0 5px rgba(0,0,0,0.1);
+}
+
+textarea{
+    width:100%;
+    height:250px;
+    resize:vertical;
+}
+
+button{
+    padding:10px 20px;
+    margin:5px;
+    cursor:pointer;
+}
+
+.layer-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:5px 0;
+}
+
+.layer-name{
+    min-width:180px;
+}
+</style>
+</head>
+<body>
+
+<h2>Generator KML / KMZ</h2>
+
+<div class="container">
+
+<div class="box">
+    <h3>Coordonate (Latitudine si Longitudine)</h3>
+    <textarea id="coords"
+placeholder="46.7700    23.5900
+46.7800    23.6000"></textarea>
+</div>
+
+<div class="box">
+    <h3>Denumire puncte</h3>
+    <textarea id="names"
+placeholder="Stalp
+
+"></textarea>
+</div>
+
+<div class="box">
+    <h3>Operatiuni (Layere)</h3>
+    <textarea id="layers"
+placeholder="Operatiune
+
+"></textarea>
+</div>
+
+<div class="box">
+    <h3>Culori Layere</h3>
+
+    <button onclick="detectLayers()">
+        Detectează layere
+    </button>
+
+    <div id="layerColors"></div>
+</div>
+
+</div>
+
+<hr>
+
+<button onclick="exportKML()">Export KML</button>
+
+
+<script>
+
+function detectLayers(){
+
+    const layersText =
+        document.getElementById("layers")
+        .value
+        .split(/\r?\n/)
+        .map(x=>x.trim())
+        .filter(x=>x);
+
+    const unique =
+        [...new Set(layersText)];
+
+    const container =
+        document.getElementById("layerColors");
+
+    container.innerHTML="";
+
+    unique.forEach(layer=>{
+
+        const row =
+            document.createElement("div");
+
+        row.className = "layer-row";
+
+        row.innerHTML = `
+            <span class="layer-name">${layer}</span>
+            <input type="color"
+                   data-layer="${layer}"
+                   value="#ff0000">
+        `;
+
+        container.appendChild(row);
+
+    });
+
+}
+
+
+
+function hexToKmlColor(hex){
+
+    hex = hex.replace("#","");
+
+    let r = hex.substring(0,2);
+    let g = hex.substring(2,4);
+    let b = hex.substring(4,6);
+
+    return "ff" + b + g + r;
+}
+
+
+
+function buildKML(){
+
+    const coordLines =
+        document.getElementById("coords")
+        .value
+        .trim()
+        .split(/\r?\n/);
+
+    const nameLines =
+        document.getElementById("names")
+        .value
+        .split(/\r?\n/);
+
+    const layerLines =
+        document.getElementById("layers")
+        .value
+        .split(/\r?\n/);
+
+    const layerColors = {};
+
+    document
+    .querySelectorAll("#layerColors input")
+    .forEach(el=>{
+        layerColors[el.dataset.layer] =
+            el.value;
+    });
+
+    const folders = {};
+
+    for(let i=0;i<coordLines.length;i++){
+
+        const coord =
+            coordLines[i]
+            .trim()
+            .split(/\s+/);
+
+        if(coord.length < 2)
+            continue;
+
+        const lat = coord[0];
+        const lon = coord[1];
+
+        let name =
+            (nameLines[i] || "").trim();
+
+        if(name === "")
+            name = "Stalp";
+
+        let layer =
+            (layerLines[i] || "").trim();
+
+        if(layer === "")
+            layer = "Neclasificat";
+
+        if(!folders[layer])
+            folders[layer]=[];
+
+        folders[layer].push({
+            name,
+            lat,
+            lon
+        });
+
+    }
+
+    let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>`;
+
+    Object.keys(folders).forEach(layer=>{
+
+        let color =
+            layerColors[layer] ||
+            "#ff0000";
+
+        let kmlColor =
+            hexToKmlColor(color);
+
+        kml += `
+<Style id="${layer}">
+<IconStyle>
+<color>${kmlColor}</color>
+<scale>1.2</scale>
+<Icon>
+<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+</Icon>
+</IconStyle>
+</Style>
+
+<Folder>
+<name>${layer}</name>`;
+
+        folders[layer]
+        .forEach(point=>{
+
+            kml += `
+<Placemark>
+<name>${point.name}</name>
+<styleUrl>#${layer}</styleUrl>
+<Point>
+<coordinates>
+${point.lon},${point.lat},0
+</coordinates>
+</Point>
+</Placemark>`;
+
+        });
+
+        kml += `
+</Folder>`;
+
+    });
+
+    kml += `
+</Document>
+</kml>`;
+
+    return kml;
+
+}
+
+
+
+function downloadFile(name, blob){
+
+    const a =
+        document.createElement("a");
+
+    a.href =
+        URL.createObjectURL(blob);
+
+    a.download = name;
+
+    a.click();
+}
+
+
+
+function exportKML(){
+
+    const kml = buildKML();
+
+    downloadFile(
+        "puncte.kml",
+        new Blob(
+            [kml],
+            {
+                type:"application/vnd.google-earth.kml+xml"
+            }
+        )
+    );
+}
+
+
+
+async function exportKMZ(){
+
+    const zip = new JSZip();
+
+    zip.file(
+        "doc.kml",
+        buildKML()
+    );
+
+    const blob =
+        await zip.generateAsync({
+            type:"blob"
+        });
+
+    downloadFile(
+        "puncte.kmz",
+        blob
+    );
+
+}
+</script>
+
+</body>
+</html>
