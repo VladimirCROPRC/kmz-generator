@@ -311,7 +311,10 @@ const iconMap = {
     "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
 
     orange:
-    "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png"
+    "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png",
+
+    gray:
+    "http://maps.google.com/mapfiles/kml/paddle/wht-circle.png"
 
 };
 
@@ -873,6 +876,10 @@ function detectLayers(){
                     🟠 Portocaliu
                 </option>
 
+                <option value="gray">
+                    ⚪ Gri
+                </option>
+
             </select>
         `;
 
@@ -1042,7 +1049,180 @@ ${point.lon},${point.lat},0
 
 }
 
-    function openGoogleMaps(){
+    
+function haversineDistance(a, b){
+
+    const R = 6371;
+
+    const toRad = deg =>
+        deg * Math.PI / 180;
+
+    const dLat =
+        toRad(b.lat - a.lat);
+
+    const dLon =
+        toRad(b.lon - a.lon);
+
+    const lat1 =
+        toRad(a.lat);
+
+    const lat2 =
+        toRad(b.lat);
+
+    const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) *
+        Math.cos(lat2) *
+        Math.sin(dLon / 2) ** 2;
+
+    return 2 * R *
+        Math.asin(Math.sqrt(h));
+}
+
+
+function routeDistance(points){
+
+    let total = 0;
+
+    for(let i = 0; i < points.length - 1; i++){
+        total +=
+            haversineDistance(
+                points[i],
+                points[i + 1]
+            );
+    }
+
+    return total;
+}
+
+
+function nearestNeighborRoute(points){
+
+    /*
+     * Primul punct rămâne START.
+     * Ultimul punct rămâne DESTINAȚIE.
+     * Sunt optimizate punctele intermediare.
+     */
+
+    if(points.length <= 2)
+        return [...points];
+
+    const start = points[0];
+    const end = points[points.length - 1];
+
+    const remaining =
+        points.slice(1, -1);
+
+    const route = [start];
+
+    let current = start;
+
+    while(remaining.length){
+
+        let bestIndex = 0;
+        let bestDistance = Infinity;
+
+        for(let i = 0; i < remaining.length; i++){
+
+            const d =
+                haversineDistance(
+                    current,
+                    remaining[i]
+                );
+
+            if(d < bestDistance){
+                bestDistance = d;
+                bestIndex = i;
+            }
+
+        }
+
+        current =
+            remaining.splice(bestIndex, 1)[0];
+
+        route.push(current);
+    }
+
+    route.push(end);
+
+    return route;
+}
+
+
+function twoOptRoute(points){
+
+    /*
+     * Îmbunătățire 2-opt.
+     * Primul și ultimul punct rămân fixe.
+     */
+
+    if(points.length < 4)
+        return [...points];
+
+    let route = [...points];
+    let improved = true;
+    let passes = 0;
+
+    const maxPasses = 50;
+
+    while(improved && passes < maxPasses){
+
+        improved = false;
+        passes++;
+
+        for(let i = 1; i < route.length - 2; i++){
+
+            for(let k = i + 1; k < route.length - 1; k++){
+
+                const a = route[i - 1];
+                const b = route[i];
+                const c = route[k];
+                const d = route[k + 1];
+
+                const currentDistance =
+                    haversineDistance(a, b) +
+                    haversineDistance(c, d);
+
+                const newDistance =
+                    haversineDistance(a, c) +
+                    haversineDistance(b, d);
+
+                if(newDistance + 0.000001 < currentDistance){
+
+                    const reversed =
+                        route
+                        .slice(i, k + 1)
+                        .reverse();
+
+                    route = [
+                        ...route.slice(0, i),
+                        ...reversed,
+                        ...route.slice(k + 1)
+                    ];
+
+                    improved = true;
+                }
+
+            }
+
+        }
+
+    }
+
+    return route;
+}
+
+
+function optimizeRoutePoints(points){
+
+    const nearest =
+        nearestNeighborRoute(points);
+
+    return twoOptRoute(nearest);
+}
+
+
+function openGoogleMaps(){
 
     const coordLines =
         document
@@ -1051,44 +1231,101 @@ ${point.lon},${point.lat},0
         .trim()
         .split(/\r?\n/);
 
-    if(coordLines.length < 2){
+    const points = [];
 
-        alert(
-            "Ai nevoie de minim 2 puncte."
-        );
-
-        return;
-    }
-
-    let url =
-        "https://www.google.com/maps/dir/";
-
-    coordLines.forEach(line => {
+    coordLines.forEach((line, index) => {
 
         const parts =
             line.trim()
             .split(/\s+/);
 
-        if(parts.length < 2){
+        if(parts.length < 2)
+            return;
+
+        const lat =
+            parseFloat(
+                String(parts[0]).replace(",", ".")
+            );
+
+        const lon =
+            parseFloat(
+                String(parts[1]).replace(",", ".")
+            );
+
+        if(
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon)
+        ){
             return;
         }
 
-        const lat = parts[0];
-        const lon = parts[1];
+        points.push({
+            lat,
+            lon,
+            originalIndex: index
+        });
+
+    });
+
+    if(points.length < 2){
+
+        alert(
+            "Ai nevoie de minim 2 puncte valide."
+        );
+
+        return;
+    }
+
+    const optimize =
+        document
+        .getElementById("optimizeRoute")
+        .checked;
+
+    let routePoints =
+        [...points];
+
+    if(optimize){
+
+        const before =
+            routeDistance(routePoints);
+
+        routePoints =
+            optimizeRoutePoints(routePoints);
+
+        const after =
+            routeDistance(routePoints);
+
+        const saved =
+            Math.max(0, before - after);
+
+        console.log(
+            `Rută optimizată: ${before.toFixed(2)} km → ` +
+            `${after.toFixed(2)} km ` +
+            `(economie aprox. ${saved.toFixed(2)} km)`
+        );
+
+    }
+
+    let url =
+        "https://www.google.com/maps/dir/";
+
+    routePoints.forEach(point => {
 
         url +=
-            lat +
-            "," +
-            lon +
+            encodeURIComponent(
+                point.lat + "," + point.lon
+            ) +
             "/";
+
     });
 
     window.open(
         url,
         "_blank"
     );
-
 }
+
+
 function exportKML(){
 
     const blob =
@@ -1107,7 +1344,7 @@ function exportKML(){
         URL.createObjectURL(blob);
 
     a.download =
-        "mentenanta.kml";
+        "puncte.kml";
 
     a.click();
 
