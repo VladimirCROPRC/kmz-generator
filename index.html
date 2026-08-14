@@ -212,6 +212,10 @@ input[type="file"]{
                 <button onclick="populateFromExcel()">
                     ⬇️ Populează câmpurile
                 </button>
+
+                <button onclick="resetApplication()" style="margin-left:10px;background:#6c757d;">
+                    🔄 Reset
+                </button>
             </div>
         </div>
     </div>
@@ -758,6 +762,38 @@ function populateFromExcel(){
     }
 
     alert(message);
+}
+
+
+
+function resetApplication(){
+
+    // Golește cele trei câmpuri principale.
+    document.getElementById("coords").value = "";
+    document.getElementById("names").value = "";
+    document.getElementById("layers").value = "";
+
+    // Golește layerele detectate.
+    document.getElementById("layerColors").innerHTML = "";
+
+    // Resetează importul Excel.
+    document.getElementById("excelFile").value = "";
+    document.getElementById("excelStatus").textContent = "";
+    document.getElementById("excelMapping").style.display = "none";
+
+    // Golește selecțiile și datele Excel din memorie.
+    ["latColumn", "lonColumn", "nameColumn", "layerColumn"]
+        .forEach(id => {
+            const select = document.getElementById(id);
+            if(select){
+                select.innerHTML =
+                    '<option value="">-- Selectează coloana --</option>';
+            }
+        });
+
+    excelRows = [];
+    excelHeaders = [];
+    excelHeaderRowIndex = -1;
 }
 
 
