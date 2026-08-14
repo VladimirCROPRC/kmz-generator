@@ -198,7 +198,7 @@ input[type="file"]{
                 </label>
 
                 <label>
-                    Operațiuni / Layere:
+                    Operațiuni / Layere (opțional):
                     <select id="layerColumn"></select>
                 </label>
             </div>
@@ -682,13 +682,12 @@ function populateFromExcel(){
     if(
         latColumn === "" ||
         lonColumn === "" ||
-        nameColumn === "" ||
-        layerColumn === ""
+        nameColumn === ""
     ){
 
         alert(
-            "Selectează coloanele pentru Latitudine, Longitudine, " +
-            "Denumire puncte și Operațiuni / Layere."
+            "Selectează coloanele pentru Latitudine, Longitudine " +
+            "și Denumire puncte."
         );
 
         return;
@@ -734,7 +733,9 @@ function populateFromExcel(){
             getExcelCell(row, nameColumn);
 
         const layer =
-            getExcelCell(row, layerColumn);
+            layerColumn === ""
+                ? ""
+                : getExcelCell(row, layerColumn);
 
         coords.push(`${lat} ${lon}`);
         names.push(name);
