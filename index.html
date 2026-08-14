@@ -111,6 +111,7 @@ select{
 }
 
 </style>
+/npm/xlsx/dist/xlsx.full.min.js"></script
 </head>
 <body>
 
@@ -156,6 +157,44 @@ select{
         <h3>🔧 Operațiuni (Layere)</h3>
         <textarea id="layers"></textarea>
     </div>
+    <div class="box" style="grid-column:1 / 4;">
+
+    <h3>📊 Import Excel</h3>
+
+    <input
+        type="file"
+        id="excelFile"
+        accept=".xlsx,.xls">
+
+    <hr>
+
+    <label>LAT:</label>
+    <select id="latColumn"></select>
+
+    <label style="margin-left:15px;">
+        LON:
+    </label>
+    <select id="lonColumn"></select>
+
+    <label style="margin-left:15px;">
+        Denumire:
+    </label>
+    <select id="nameColumn"></select>
+
+    <label style="margin-left:15px;">
+        Layer:
+    </label>
+    <select id="layerColumn"></select>
+
+    <button
+        style="margin-left:15px;"
+        onclick="importExcelData()">
+
+        Importă Excel
+
+    </button>
+
+</div>
 
     <div class="box layers-box">
 
@@ -206,8 +245,233 @@ select{
 </button>
 
 <script>
+let excelRows = [];
 
 const iconMap = {
+    document
+.getElementById("excelFile")
+.addEventListener(
+    "change",
+    loadExcel
+);
+
+function loadExcel(event){
+
+    const file =
+        event.target.files[0];
+
+    if(!file){
+        return;
+    }
+
+    const reader =
+        new FileReader();
+
+    reader.onload =
+    function(e){
+
+        const data =
+            new Uint8Array(
+                e.target.result
+            );
+
+        const workbook =
+            XLSX.read(
+                data,
+                {
+                    type:"array"
+                }
+            );
+
+        const sheet =
+            workbook.Sheets[
+                workbook.SheetNames[0]
+            ];
+
+        excelRows =
+            XLSX.utils.sheet_to_json(
+                sheet
+            );
+
+        if(!excelRows.length){
+
+            alert(
+                "Fișierul Excel este gol."
+            );
+
+            return;
+        }
+
+        const columns =
+            Object.keys(
+                excelRows[0]
+            );
+
+        populateSelectors(
+            columns
+        );
+
+        alert(
+            "Excel încărcat cu succes."
+        );
+
+    };
+
+    reader.readAsArrayBuffer(
+        file
+    );
+
+}
+
+function populateSelectors(columns){
+
+    const selectors = [
+
+        document.getElementById(
+            "latColumn"
+        ),
+
+        document.getElementById(
+            "lonColumn"
+        ),
+
+        document.getElementById(
+            "nameColumn"
+        ),
+
+        document.getElementById(
+            "layerColumn"
+        )
+
+    ];
+
+    selectors.forEach(select=>{
+
+        select.innerHTML = "";
+
+        columns.forEach(col=>{
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value = col;
+            option.textContent = col;
+
+            select.appendChild(
+                option
+            );
+
+        });
+
+    });
+
+}
+
+function importExcelData(){
+
+    if(!excelRows.length){
+
+        alert(
+            "Încarcă mai întâi un fișier Excel."
+        );
+
+        return;
+
+    }
+
+    const latCol =
+        document
+        .getElementById(
+            "latColumn"
+        )
+        .value;
+
+    const lonCol =
+        document
+        .getElementById(
+            "lonColumn"
+        )
+        .value;
+
+    const nameCol =
+        document
+        .getElementById(
+            "nameColumn"
+        )
+        .value;
+
+    const layerCol =
+        document
+        .getElementById(
+            "layerColumn"
+        )
+        .value;
+
+    const coords = [];
+    const names = [];
+    const layers = [];
+
+    excelRows.forEach(row=>{
+
+        const lat =
+            row[latCol];
+
+        const lon =
+            row[lonCol];
+
+        if(
+            lat === undefined ||
+            lon === undefined ||
+            lat === "" ||
+            lon === ""
+        ){
+            return;
+        }
+
+        coords.push(
+            lat + " " + lon
+        );
+
+        names.push(
+            row[nameCol] || ""
+        );
+
+        layers.push(
+            row[layerCol] || ""
+        );
+
+    });
+
+    document
+    .getElementById(
+        "coords"
+    )
+    .value =
+        coords.join("\n");
+
+    document
+    .getElementById(
+        "names"
+    )
+    .value =
+        names.join("\n");
+
+    document
+    .getElementById(
+        "layers"
+    )
+    .value =
+        layers.join("\n");
+
+    detectLayers();
+
+    alert(
+        "Import finalizat."
+    );
+
+}
 
     red:
     "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
