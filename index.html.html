@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator KML</title>
+
+<style>
+
+body{
+    font-family:'Segoe UI',Arial,sans-serif;
+    margin:0;
+    background:#f4f7fb;
+    color:#333;
+}
+.header{
+    background:linear-gradient(
+        135deg,
+        #005baa,
+        #0072ce
+    );
+    color:white;
+    padding:20px 30px;
+    box-shadow:0 4px 15px rgba(0,0,0,.15);
+}
+
+.logo-area{
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.logo-icon{
+    width:55px;
+    height:55px;
+    border-radius:12px;
+    background:white;
+    color:#005baa;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.app-title{
+    font-size:24px;
+    font-weight:700;
+}
+
+.app-subtitle{
+    opacity:.9;
+    font-size:14px;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:20px;
+    padding:20px;
+}
+
+.layers-box{
+    grid-column:1 / 4;
+}
+
+.box{
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    box-shadow:
+        0 8px 24px
+        rgba(0,0,0,.08);
+}
+
+textarea{
+    width:100%;
+    height:180px;
+    resize:vertical;
+    box-sizing:border-box;
+}
+
+button{
+    background:#005baa;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    cursor:pointer;
+    font-weight:600;
+    transition:.2s;
+}
+
+button:hover{
+    background:#00468a;
+}
+
+.layer-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:5px 0;
+}
+
+.layer-name{
+    min-width:200px;
+}
+
+select{
+    padding:7px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    min-width:180px;
+}
+
+input[type="file"]{
+    padding:8px;
+}
+
+#excelMapping label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+
+@media (max-width: 950px){
+    #excelMapping > div[style*="grid-template-columns"]{
+        grid-template-columns:1fr 1fr !important;
+    }
+}
+
+@media (max-width: 600px){
+    #excelMapping > div[style*="grid-template-columns"]{
+        grid-template-columns:1fr !important;
+    }
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+
+    <div class="logo-area">
+
+        <div class="logo-icon">
+            PC
+        </div>
+
+        <div>
+
+            <div class="app-title">
+                PRO CONECT GIS TOOLS
+            </div>
+
+            <div class="app-subtitle">
+                Generator KML
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="container">
+
+    <div class="box" style="grid-column:1 / 4;">
+        <h3>📊 Import Excel</h3>
+
+        <input type="file" id="excelFile" accept=".xlsx,.xls,.csv"
+               onchange="loadExcel(event)">
+
+        <span id="excelStatus" style="margin-left:10px;"></span>
+
+        <div id="excelMapping"
+             style="display:none; margin-top:15px;">
+
+            <p><b>Alege coloanele Excel pentru câmpurile aplicației:</b></p>
+
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:15px;">
+                <label>
+                    Latitudine:
+                    <select id="latColumn"></select>
+                </label>
+
+                <label>
+                    Longitudine:
+                    <select id="lonColumn"></select>
+                </label>
+
+                <label>
+                    Denumire puncte:
+                    <select id="nameColumn"></select>
+                </label>
+
+                <label>
+                    Operațiuni / Layere:
+                    <select id="layerColumn"></select>
+                </label>
+            </div>
+
+            <div style="margin-top:8px;font-size:13px;color:#666;">
+                Latitudinea și longitudinea vor fi combinate automat în câmpul „Coordonate”
+                sub forma <b>latitudine longitudine</b>.
+            </div>
+
+            <div style="margin-top:15px;">
+                <button onclick="populateFromExcel()">
+                    ⬇️ Populează câmpurile
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="box">
+        <h3>📍 Coordonate</h3>
+        <textarea id="coords"></textarea>
+    </div>
+
+    <div class="box">
+        <h3>📋 Denumire puncte</h3>
+        <textarea id="names"></textarea>
+    </div>
+
+    <div class="box">
+        <h3>🔧 Operațiuni (Layere)</h3>
+        <textarea id="layers"></textarea>
+    </div>
+
+    <div class="box layers-box">
+
+        <h3>🎨 Layere detectate</h3>
+
+        <button onclick="detectLayers()">
+            Detectează layere
+        </button>
+
+        <button onclick="selectAllLayers(true)">
+            Selectează toate
+        </button>
+
+        <button onclick="selectAllLayers(false)">
+            Debifează toate
+        </button>
+
+        <hr>
+
+        <div id="layerColors"></div>
+
+    </div>
+
+</div>
+
+<hr>
+
+<div style="text-align:center;">
+    <button onclick="exportKML()">
+    Export KML
+</button>
+
+<button onclick="openGoogleMaps()">
+    📍 Rută Google Maps
+</button>
+<label style="margin-left:15px;">
+
+    <input
+        type="checkbox"
+        id="optimizeRoute"
+        checked>
+
+    Optimizează traseul
+
+</label>
+</div>
+   
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+
+let excelRows = [];
+let excelHeaders = [];
+let excelHeaderRowIndex = -1;
+
+const iconMap = {
+
+    red:
+    "http://maps.google.com/mapfiles/kml/paddle/red-circle.png",
+
+    blue:
+    "http://maps.google.com/mapfiles/kml/paddle/blu-circle.png",
+
+    green:
+    "http://maps.google.com/mapfiles/kml/paddle/grn-circle.png",
+
+    yellow:
+    "http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png",
+
+    purple:
+    "http://maps.google.com/mapfiles/kml/paddle/purple-circle.png",
+
+    orange:
+    "http://maps.google.com/mapfiles/kml/paddle/orange-circle.png"
+
+};
+
+
+function loadExcel(event){
+
+    const file = event.target.files[0];
+
+    if(!file)
+        return;
+
+    const status = document.getElementById("excelStatus");
+    status.textContent = "Se încarcă...";
+
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+
+        try{
+
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type:"array"});
+
+            if(!workbook.SheetNames.length){
+                throw new Error("Fișierul nu conține foi.");
+            }
+
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            /*
+             * Citim foaia ca matrice (header:1), nu presupunem că primul rând
+             * este antetul. Astfel putem detecta automat anteturi aflate
+             * după titluri, rânduri goale etc.
+             */
+            const matrix = XLSX.utils.sheet_to_json(sheet, {
+                header: 1,
+                defval: "",
+                raw: false,
+                blankrows: true
+            });
+
+            if(!matrix.length){
+                throw new Error("Foaia Excel este goală.");
+            }
+
+            excelHeaderRowIndex = detectHeaderRow(matrix);
+
+            if(excelHeaderRowIndex < 0){
+                throw new Error("Nu am putut detecta automat rândul cu anteturi.");
+            }
+
+            const headerRow = matrix[excelHeaderRowIndex];
+
+            /*
+             * Păstrăm INDEXUL coloanei, nu doar numele ei.
+             * Avantaj: funcționează și dacă există anteturi duplicate.
+             */
+            excelHeaders = headerRow
+                .map((value, index) => ({
+                    index,
+                    name: String(value ?? "").trim()
+                }))
+                .filter(col => col.name !== "");
+
+            if(!excelHeaders.length){
+                throw new Error("Nu au fost găsite coloane în rândul de antet.");
+            }
+
+            /*
+             * Datele sunt toate rândurile de după antet.
+             * Eliminăm doar rândurile complet goale.
+             */
+            excelRows = matrix
+                .slice(excelHeaderRowIndex + 1)
+                .filter(row =>
+                    row.some(cell => String(cell ?? "").trim() !== "")
+                );
+
+            if(!excelRows.length){
+                throw new Error("Nu au fost găsite rânduri de date după antet.");
+            }
+
+            fillColumnSelects();
+
+            document.getElementById("excelMapping").style.display = "block";
+
+            status.textContent =
+                `✓ ${excelRows.length} rânduri încărcate din "${sheetName}" ` +
+                `(antet detectat la rândul ${excelHeaderRowIndex + 1})`;
+
+        }catch(error){
+
+            console.error(error);
+            status.textContent = "❌ Nu s-a putut citi fișierul Excel.";
+            alert("Eroare la citirea Excel: " + error.message);
+
+        }
+
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+
+function detectHeaderRow(matrix){
+
+    /*
+     * Detectăm antetul dintre primele 40 de rânduri.
+     *
+     * Scorul favorizează:
+     * - multe celule completate;
+     * - multe valori text distincte;
+     * - denumiri tipice de coloane;
+     *
+     * Într-un export cu un titlu pe primul rând și tabelul mai jos,
+     * rândul cu cele mai multe anteturi va câștiga clar.
+     */
+    const maxRows = Math.min(matrix.length, 40);
+
+    const headerWords = [
+        "id", "coordonate", "coord", "lat", "latitude",
+        "lon", "lng", "longitude", "nume", "name",
+        "serie", "rezolutie", "operatiune", "operatiuni",
+        "layer", "uat", "county"
+    ];
+
+    let bestRow = -1;
+    let bestScore = -Infinity;
+
+    for(let r = 0; r < maxRows; r++){
+
+        const row = matrix[r] || [];
+
+        const values = row
+            .map(v => String(v ?? "").trim())
+            .filter(v => v !== "");
+
+        if(values.length < 2)
+            continue;
+
+        const normalizedValues =
+            values.map(normalizeColumnName);
+
+        const uniqueCount =
+            new Set(normalizedValues).size;
+
+        let keywordHits = 0;
+
+        normalizedValues.forEach(value => {
+
+            if(headerWords.some(word =>
+                value === word ||
+                value.startsWith(word + " ") ||
+                value.includes(" " + word + " ") ||
+                value.endsWith(" " + word)
+            )){
+                keywordHits++;
+            }
+
+        });
+
+        /*
+         * Un rând cu multe coloane este de departe cel mai probabil antetul.
+         * Keyword-urile sunt doar un bonus pentru fișiere mai mici.
+         */
+        const score =
+            values.length * 10 +
+            uniqueCount * 2 +
+            keywordHits * 5;
+
+        if(score > bestScore){
+            bestScore = score;
+            bestRow = r;
+        }
+
+    }
+
+    return bestRow;
+}
+
+
+function fillColumnSelects(){
+
+    const selects = [
+        document.getElementById("latColumn"),
+        document.getElementById("lonColumn"),
+        document.getElementById("nameColumn"),
+        document.getElementById("layerColumn")
+    ];
+
+    selects.forEach(select => {
+
+        select.innerHTML =
+            '<option value="">-- Selectează coloana --</option>';
+
+        excelHeaders.forEach(col => {
+
+            const option =
+                document.createElement("option");
+
+            option.value = String(col.index);
+            option.textContent = col.name;
+
+            select.appendChild(option);
+
+        });
+
+    });
+
+    /*
+     * Alegere automată. Se prioritizează coloanele raw de lat/lon dacă există.
+     */
+    autoSelectColumn("latColumn", [
+        "lat_raw",
+        "latitude",
+        "latitudine",
+        "lat",
+        "coordonate x poza serie",
+        "coordinate x"
+    ]);
+
+    autoSelectColumn("lonColumn", [
+        "lon_raw",
+        "lng_raw",
+        "longitude",
+        "longitudine",
+        "lon",
+        "lng",
+        "coordonate y poza serie",
+        "coordinate y"
+    ]);
+
+    autoSelectColumn("nameColumn", [
+        "serie",
+        "[2] serie stalp",
+        "denumire",
+        "nume",
+        "name",
+        "id fieldos",
+        "eticheta"
+    ]);
+
+    autoSelectColumn("layerColumn", [
+        "rezolutie",
+        "operatiuni",
+        "operațiuni",
+        "operatiune",
+        "operațiune",
+        "layer",
+        "layers",
+        "categorie",
+        "category"
+    ]);
+}
+
+
+function normalizeColumnName(value){
+
+    return String(value)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+
+function autoSelectColumn(selectId, candidates){
+
+    const select =
+        document.getElementById(selectId);
+
+    const normalizedCandidates =
+        candidates.map(normalizeColumnName);
+
+    /*
+     * 1. Potrivire exactă, în ordinea de prioritate a candidaților.
+     */
+    for(const candidate of normalizedCandidates){
+
+        for(const option of select.options){
+
+            if(option.value === "")
+                continue;
+
+            if(normalizeColumnName(option.textContent) === candidate){
+                select.value = option.value;
+                return;
+            }
+
+        }
+
+    }
+
+    /*
+     * 2. Potrivire parțială.
+     */
+    for(const candidate of normalizedCandidates){
+
+        for(const option of select.options){
+
+            if(option.value === "")
+                continue;
+
+            const normalized =
+                normalizeColumnName(option.textContent);
+
+            if(
+                normalized.includes(candidate) ||
+                candidate.includes(normalized)
+            ){
+                select.value = option.value;
+                return;
+            }
+
+        }
+
+    }
+}
+
+
+function getExcelCell(row, columnIndex){
+
+    if(columnIndex === "" || columnIndex === null)
+        return "";
+
+    const index = Number(columnIndex);
+
+    if(!Number.isInteger(index) || index < 0)
+        return "";
+
+    return String(row[index] ?? "").trim();
+}
+
+
+function normalizeCoordinate(value){
+
+    /*
+     * Păstrăm precizia din Excel și schimbăm doar virgula zecimală
+     * în punct, dacă este cazul.
+     */
+    return String(value ?? "")
+        .trim()
+        .replace(",", ".");
+}
+
+
+function populateFromExcel(){
+
+    if(!excelRows.length){
+        alert("Încarcă mai întâi un fișier Excel.");
+        return;
+    }
+
+    const latColumn =
+        document.getElementById("latColumn").value;
+
+    const lonColumn =
+        document.getElementById("lonColumn").value;
+
+    const nameColumn =
+        document.getElementById("nameColumn").value;
+
+    const layerColumn =
+        document.getElementById("layerColumn").value;
+
+    if(
+        latColumn === "" ||
+        lonColumn === "" ||
+        nameColumn === "" ||
+        layerColumn === ""
+    ){
+
+        alert(
+            "Selectează coloanele pentru Latitudine, Longitudine, " +
+            "Denumire puncte și Operațiuni / Layere."
+        );
+
+        return;
+    }
+
+    if(latColumn === lonColumn){
+
+        alert("Latitudinea și longitudinea trebuie să provină din coloane diferite.");
+        return;
+
+    }
+
+    const coords = [];
+    const names = [];
+    const layers = [];
+
+    let skipped = 0;
+
+    excelRows.forEach(row => {
+
+        const lat =
+            normalizeCoordinate(
+                getExcelCell(row, latColumn)
+            );
+
+        const lon =
+            normalizeCoordinate(
+                getExcelCell(row, lonColumn)
+            );
+
+        /*
+         * Coordonatele sunt două coloane în Excel,
+         * dar devin O SINGURĂ linie în textarea:
+         *
+         * latitude longitude
+         */
+        if(!lat || !lon){
+            skipped++;
+            return;
+        }
+
+        const name =
+            getExcelCell(row, nameColumn);
+
+        const layer =
+            getExcelCell(row, layerColumn);
+
+        coords.push(`${lat} ${lon}`);
+        names.push(name);
+        layers.push(layer);
+
+    });
+
+    document.getElementById("coords").value =
+        coords.join("\n");
+
+    document.getElementById("names").value =
+        names.join("\n");
+
+    document.getElementById("layers").value =
+        layers.join("\n");
+
+    detectLayers();
+
+    let message =
+        `✓ Au fost încărcate ${coords.length} puncte.`;
+
+    if(skipped > 0){
+        message +=
+            ` ${skipped} rânduri fără ambele coordonate au fost ignorate.`;
+    }
+
+    alert(message);
+}
+
+
+function detectLayers(){
+
+    const layerLines =
+        document.getElementById("layers")
+        .value
+        .split(/\r?\n/);
+
+    const counts = {};
+
+    layerLines.forEach(layer=>{
+
+        layer = layer.trim();
+
+        if(layer === "")
+            layer = "Neclasificat";
+
+        counts[layer] =
+            (counts[layer] || 0) + 1;
+
+    });
+
+    const container =
+        document.getElementById(
+            "layerColors"
+        );
+
+    container.innerHTML = "";
+
+    Object.keys(counts).forEach(layer=>{
+
+        const row =
+            document.createElement("div");
+
+        row.className =
+            "layer-row";
+
+        row.innerHTML = `
+            <input
+                type="checkbox"
+                class="layer-enabled"
+                data-layer="${layer}"
+                checked>
+
+            <span class="layer-name">
+                ${layer} (${counts[layer]})
+            </span>
+
+            <select
+                class="layer-color"
+                data-layer="${layer}">
+
+                <option value="red">
+                    🔴 Roșu
+                </option>
+
+                <option value="blue">
+                    🔵 Albastru
+                </option>
+
+                <option value="green">
+                    🟢 Verde
+                </option>
+
+                <option value="yellow">
+                    🟡 Galben
+                </option>
+
+                <option value="purple">
+                    🟣 Mov
+                </option>
+
+                <option value="orange">
+                    🟠 Portocaliu
+                </option>
+
+            </select>
+        `;
+
+        container.appendChild(row);
+
+    });
+
+}
+
+function selectAllLayers(value){
+
+    document
+    .querySelectorAll(
+        ".layer-enabled"
+    )
+    .forEach(cb=>{
+        cb.checked = value;
+    });
+
+}
+
+function buildKML(){
+
+    const coordLines =
+        document
+        .getElementById("coords")
+        .value
+        .trim()
+        .split(/\r?\n/);
+
+    const nameLines =
+        document
+        .getElementById("names")
+        .value
+        .split(/\r?\n/);
+
+    const layerLines =
+        document
+        .getElementById("layers")
+        .value
+        .split(/\r?\n/);
+
+    const layerColors = {};
+    const enabledLayers = {};
+
+    document
+    .querySelectorAll(
+        ".layer-color"
+    )
+    .forEach(el=>{
+
+        layerColors[
+            el.dataset.layer
+        ] = el.value;
+
+    });
+
+    document
+    .querySelectorAll(
+        ".layer-enabled"
+    )
+    .forEach(el=>{
+
+        enabledLayers[
+            el.dataset.layer
+        ] = el.checked;
+
+    });
+
+    const folders = {};
+
+    for(let i=0;
+        i<coordLines.length;
+        i++){
+
+        const coord =
+            coordLines[i]
+            .trim()
+            .split(/\s+/);
+
+        if(coord.length < 2)
+            continue;
+
+        const lat = coord[0];
+        const lon = coord[1];
+
+        let name =
+            (nameLines[i] || "")
+            .trim();
+
+        if(name === "")
+            name = "Stalp";
+
+        let layer =
+            (layerLines[i] || "")
+            .trim();
+
+        if(layer === "")
+            layer = "Neclasificat";
+
+        if(!folders[layer])
+            folders[layer] = [];
+
+        folders[layer].push({
+            name,
+            lat,
+            lon
+        });
+
+    }
+
+    let kml =
+`<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>`;
+
+    Object.keys(folders)
+    .forEach(layer=>{
+
+        if(!enabledLayers[layer])
+            return;
+
+        const iconUrl =
+            iconMap[
+                layerColors[layer]
+            ] || iconMap.red;
+
+        kml += `
+<Style id="${layer}">
+<IconStyle>
+<scale>1.2</scale>
+<Icon>
+<href>${iconUrl}</href>
+</Icon>
+</IconStyle>
+</Style>
+
+<Folder>
+<name>${layer}</name>`;
+
+        folders[layer]
+        .forEach(point=>{
+
+            kml += `
+<Placemark>
+<name>${point.name}</name>
+<styleUrl>#${layer}</styleUrl>
+<Point>
+<coordinates>
+${point.lon},${point.lat},0
+</coordinates>
+</Point>
+</Placemark>`;
+
+        });
+
+        kml += `
+</Folder>`;
+
+    });
+
+    kml += `
+</Document>
+</kml>`;
+
+    return kml;
+
+}
+
+    function openGoogleMaps(){
+
+    const coordLines =
+        document
+        .getElementById("coords")
+        .value
+        .trim()
+        .split(/\r?\n/);
+
+    if(coordLines.length < 2){
+
+        alert(
+            "Ai nevoie de minim 2 puncte."
+        );
+
+        return;
+    }
+
+    let url =
+        "https://www.google.com/maps/dir/";
+
+    coordLines.forEach(line => {
+
+        const parts =
+            line.trim()
+            .split(/\s+/);
+
+        if(parts.length < 2){
+            return;
+        }
+
+        const lat = parts[0];
+        const lon = parts[1];
+
+        url +=
+            lat +
+            "," +
+            lon +
+            "/";
+    });
+
+    window.open(
+        url,
+        "_blank"
+    );
+
+}
+function exportKML(){
+
+    const blob =
+        new Blob(
+            [buildKML()],
+            {
+                type:
+                "application/vnd.google-earth.kml+xml"
+            }
+        );
+
+    const a =
+        document.createElement("a");
+
+    a.href =
+        URL.createObjectURL(blob);
+
+    a.download =
+        "puncte.kml";
+
+    a.click();
+
+}
+
+</script>
+
+</body>
+</html>
